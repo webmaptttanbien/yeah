@@ -1,0 +1,3179 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title>Bản đồ tra cứu giá đất theo bảng giá nhà nước tại Thị trấn Tân Biên</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/proj4.js"></script>
+        <script src="js/proj4leaflet.js"></script>
+        <script src="data/Giadatnongnghiep_0.js"></script>
+        <script src="data/GiadatphiNong_1.js"></script>
+        <script src="data/Hientrang_2.js"></script>
+        <script src="data/Thuyhe_3.js"></script>
+        <script src="data/Duonggiaothong_4.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+              highlightLayer.setStyle({
+                color: '#ffff00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#ffff00',
+                fillOpacity: 1
+              });
+            }
+        }
+        var crs = new L.Proj.CRS('EPSG:9209', '+proj=tmerc +lat_0=0 +lon_0=105.5 +k=0.9999 +x_0=500000 +y_0=0 +ellps=WGS84 +towgs84=-191.90441429,-39.30318279,-111.45032835,0.00928836,-0.01975479,0.00427372,0.252906278 +units=m +no_defs', {
+            resolutions: [2800, 1400, 700, 350, 175, 84, 42, 21, 11.2, 5.6, 2.8, 1.4, 0.7, 0.35, 0.14, 0.07],
+        });
+        var map = L.map('map', {
+            crs: crs,
+            continuousWorld: false,
+            worldCopyJump: false, 
+            zoomControl:false, maxZoom:28, minZoom:1
+        })
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var title = new L.Control({'position':'topright'});
+        title.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+        title.update = function () {
+            this._div.innerHTML = '<h2>Bản đồ tra cứu giá đất theo bảng giá nhà nước tại Thị trấn Tân Biên</h2>';
+        };
+        title.addTo(map);
+        var abstract = new L.Control({'position':'bottomleft'});
+        abstract.onAdd = function (map) {
+            this._div = L.DomUtil.create('div',
+            'leaflet-control abstract');
+            this._div.id = 'abstract'
+                this._div.setAttribute("onmouseenter", "abstract.show()");
+                this._div.setAttribute("onmouseleave", "abstract.hide()");
+                this.hide();
+                return this._div;
+            };
+            abstract.hide = function () {
+                this._div.classList.remove("abstractUncollapsed");
+                this._div.classList.add("abstract");
+                this._div.innerHTML = 'i'
+            }
+            abstract.show = function () {
+                this._div.classList.remove("abstract");
+                this._div.classList.add("abstractUncollapsed");
+                this._div.innerHTML = '🔹Hướng dẫn sử dụng<br />-  Layer List: Hiển thị danh sách lớp <br />-  Measure Tool: Thước đo khoảng cách/diện tích<br />-  Geolocation: Định vị vị trí người dùng (GPS)<br />-  Layer seach: Tra cứu thửa đất theo số tờ_số thửa <br />🔹 Giá đất được áp dụng theo Quyết định số 54/2024/QĐ-UBND Tỉnh Tây Ninh <br />🔹 Lưu ý: Thông tin chỉ mang tính chất tham khảo <br /><br /><br /><br />';
+        };
+        abstract.addTo(map);
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+            if (bounds_group.getLayers().length) {
+                map.fitBounds(bounds_group.getBounds());
+            }
+            map.setMaxBounds(map.getBounds());
+        }
+        function pop_Giadatnongnghiep_0(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Chủ sử dụng</th>\
+                        <td class="visible-with-data" id="CSD">' + (feature.properties['CSD'] !== null ? autolinker.link(String(feature.properties['CSD']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Diện tích</th>\
+                        <td class="visible-with-data" id="Dientich">' + (feature.properties['Dientich'] !== null ? autolinker.link(String(feature.properties['Dientich']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Vị trí</th>\
+                        <td class="visible-with-data" id="Vị trí">' + (feature.properties['Vị trí'] !== null ? autolinker.link(String(feature.properties['Vị trí']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tờ_thửa</th>\
+                        <td class="visible-with-data" id="To_Thua">' + (feature.properties['To_Thua'] !== null ? autolinker.link(String(feature.properties['To_Thua']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Giadatnongnghiep_0_0(feature) {
+            switch(String(feature.properties['CLN'])) {
+                case '84000':
+                    return {
+                pane: 'pane_Giadatnongnghiep_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(252,251,253,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '100000':
+                    return {
+                pane: 'pane_Giadatnongnghiep_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(169,219,142,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '126000':
+                    return {
+                pane: 'pane_Giadatnongnghiep_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(47,148,41,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_Giadatnongnghiep_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,104,55,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Giadatnongnghiep_0');
+        map.getPane('pane_Giadatnongnghiep_0').style.zIndex = 400;
+        map.getPane('pane_Giadatnongnghiep_0').style['mix-blend-mode'] = 'normal';
+        var layer_Giadatnongnghiep_0 = new L.geoJson(json_Giadatnongnghiep_0, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Giadatnongnghiep_0',
+            layerName: 'layer_Giadatnongnghiep_0',
+            pane: 'pane_Giadatnongnghiep_0',
+            onEachFeature: pop_Giadatnongnghiep_0,
+            style: style_Giadatnongnghiep_0_0,
+        });
+        bounds_group.addLayer(layer_Giadatnongnghiep_0);
+        function pop_GiadatphiNong_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">CSD</th>\
+                        <td class="visible-with-data" id="CSD">' + (feature.properties['CSD'] !== null ? autolinker.link(String(feature.properties['CSD']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Dientich</th>\
+                        <td class="visible-with-data" id="Dientich">' + (feature.properties['Dientich'] !== null ? autolinker.link(String(feature.properties['Dientich']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Heso</th>\
+                        <td class="visible-with-data" id="Heso">' + (feature.properties['Heso'] !== null ? autolinker.link(String(feature.properties['Heso']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Ghichu</th>\
+                        <td class="visible-with-data" id="Ghichu">' + (feature.properties['Ghichu'] !== null ? autolinker.link(String(feature.properties['Ghichu']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">To_Thua</th>\
+                        <td class="visible-with-data" id="To_Thua">' + (feature.properties['To_Thua'] !== null ? autolinker.link(String(feature.properties['To_Thua']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_GiadatphiNong_1_0(feature) {
+            switch(String(feature.properties['ODT'])) {
+                case '200000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(241,238,246,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '201600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(240,236,245,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '213600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(240,235,244,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '220800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(239,233,244,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '221760':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(238,232,243,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '226800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,230,242,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '228000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,229,241,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '232800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(236,227,240,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '249600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(235,226,239,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '254400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(235,224,239,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '259200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,222,238,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '259560':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(233,221,237,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '268800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,219,236,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '288000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(232,218,235,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '293760':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(231,216,234,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '295200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(230,215,234,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '313200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(230,213,233,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '316800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(229,211,232,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '336000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(228,210,231,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '350400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,208,230,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '360000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(227,207,230,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '364000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(226,205,229,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '367200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(225,204,228,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '370800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(225,202,227,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '380160':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(224,201,226,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '393600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,199,225,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '436800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,197,225,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '445200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,196,224,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '446400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,194,223,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '453600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,193,222,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '470400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,191,221,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '480000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,190,221,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '492000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,188,220,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '494400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,186,219,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '504000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,185,218,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '528000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,183,217,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '540000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(215,182,216,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '550800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(215,180,215,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '552000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(215,178,214,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '554400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,176,213,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '561600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,173,212,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '576240':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,171,211,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '588000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,169,210,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '612000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,167,209,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '613200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,165,208,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '624000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,162,207,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '633600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,160,206,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '636000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(217,158,204,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '648000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,156,203,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '658800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,154,202,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '660000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,151,201,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '672000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,149,200,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '688800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,147,199,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '696000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,145,198,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '720000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,143,197,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '732000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,140,196,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '740880':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,138,195,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '744000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(219,136,194,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '747600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,134,192,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '756000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,132,191,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '764400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,129,190,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '768000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,127,189,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '792000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,125,188,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '798000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,123,187,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '809760':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,121,186,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '816000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,119,185,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '823200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,116,184,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '828000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,114,183,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '831600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,112,181,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '840000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,110,180,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '846000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,108,179,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '856800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,105,178,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '864000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,103,177,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '864360':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,101,176,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '865200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,99,174,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '867600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,97,173,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '876000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,95,171,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '895200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,93,170,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '900000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,91,168,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '924000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,89,167,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '948000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,87,165,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '949200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,85,164,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '957600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(223,83,162,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '960000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,81,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '984000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,79,159,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1041600':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,77,157,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1044000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,75,156,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1068000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,73,154,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1092000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,71,153,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1108800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,69,151,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1116000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,67,149,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1140000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,65,148,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1156800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,63,146,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1164000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,61,145,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1176000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,59,143,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1188000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,57,142,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1200000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,55,140,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1215300':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,53,139,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1224000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,51,137,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1234800':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,49,135,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1236000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(222,47,134,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1248000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,45,132,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1260000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,43,131,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1272000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,41,129,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1279200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,39,128,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1356000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,37,126,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1368000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,35,124,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1380000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,33,123,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1395000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,31,121,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1404000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(221,29,120,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1428000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(220,28,118,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1488000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(218,27,117,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1560000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,26,115,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1620400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(214,25,114,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1680000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(212,25,113,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1788000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(211,24,111,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1790400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(209,23,110,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1800000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(207,22,108,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1836000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(205,21,107,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1848000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(203,21,105,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1860000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(201,20,104,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '1940400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(199,19,103,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2024400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(197,18,101,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2196000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(195,18,100,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2400000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(194,17,98,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2558400':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(192,16,97,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2640000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(190,15,95,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2772000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(188,15,94,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2835700':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(186,14,93,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2881200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(184,13,91,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '2892000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(182,12,90,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '3133200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(180,12,88,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '3255000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(178,11,87,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '3960000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(177,10,86,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4051000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(175,9,84,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4116000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(173,8,83,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4476000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(171,8,81,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4477200':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(169,7,80,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4650000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(167,6,78,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '4848000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(165,5,77,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '5880000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(163,5,76,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '6396000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(161,4,74,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '6636000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(160,3,73,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '7872000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(158,2,71,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '8400000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(156,2,70,1.0)',
+                interactive: true,
+            }
+                    break;
+                case '9480000':
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(154,1,68,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_GiadatphiNong_1',
+                opacity: 1,
+                color: 'rgba(1,3,5,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(152,0,67,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_GiadatphiNong_1');
+        map.getPane('pane_GiadatphiNong_1').style.zIndex = 401;
+        map.getPane('pane_GiadatphiNong_1').style['mix-blend-mode'] = 'normal';
+        var layer_GiadatphiNong_1 = new L.geoJson(json_GiadatphiNong_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_GiadatphiNong_1',
+            layerName: 'layer_GiadatphiNong_1',
+            pane: 'pane_GiadatphiNong_1',
+            onEachFeature: pop_GiadatphiNong_1,
+            style: style_GiadatphiNong_1_0,
+        });
+        bounds_group.addLayer(layer_GiadatphiNong_1);
+        map.addLayer(layer_GiadatphiNong_1);
+        function pop_Hientrang_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Số tờ</th>\
+                        <td class="visible-with-data" id="soto">' + (feature.properties['soto'] !== null ? autolinker.link(String(feature.properties['soto']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Số thửa</th>\
+                        <td class="visible-with-data" id="sothua">' + (feature.properties['sothua'] !== null ? autolinker.link(String(feature.properties['sothua']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Chủ sử dụng</th>\
+                        <td class="visible-with-data" id="CSD">' + (feature.properties['CSD'] !== null ? autolinker.link(String(feature.properties['CSD']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Diện tích </th>\
+                        <td class="visible-with-data" id="Dientich">' + (feature.properties['Dientich'] !== null ? autolinker.link(String(feature.properties['Dientich']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Đối tượng</th>\
+                        <td class="visible-with-data" id="Doituong">' + (feature.properties['Doituong'] !== null ? autolinker.link(String(feature.properties['Doituong']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Loại đất </th>\
+                        <td class="visible-with-data" id="Loaidat">' + (feature.properties['Loaidat'] !== null ? autolinker.link(String(feature.properties['Loaidat']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ODT</th>\
+                        <td class="visible-with-data" id="ODT">' + (feature.properties['ODT'] !== null ? autolinker.link(String(feature.properties['ODT']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Đường</th>\
+                        <td class="visible-with-data" id="Duong">' + (feature.properties['Duong'] !== null ? autolinker.link(String(feature.properties['Duong']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Đoạn</th>\
+                        <td class="visible-with-data" id="Doan">' + (feature.properties['Doan'] !== null ? autolinker.link(String(feature.properties['Doan']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ODT gốc </th>\
+                        <td class="visible-with-data" id="ODTgoc">' + (feature.properties['ODTgoc'] !== null ? autolinker.link(String(feature.properties['ODTgoc']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">TMD</th>\
+                        <td class="visible-with-data" id="TMD">' + (feature.properties['TMD'] !== null ? autolinker.link(String(feature.properties['TMD']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">CSK</th>\
+                        <td class="visible-with-data" id="CSK">' + (feature.properties['CSK'] !== null ? autolinker.link(String(feature.properties['CSK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">LUA</th>\
+                        <td class="visible-with-data" id="LUA">' + (feature.properties['LUA'] !== null ? autolinker.link(String(feature.properties['LUA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">HNK</th>\
+                        <td class="visible-with-data" id="HNK">' + (feature.properties['HNK'] !== null ? autolinker.link(String(feature.properties['HNK']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">CLN</th>\
+                        <td class="visible-with-data" id="CLN">' + (feature.properties['CLN'] !== null ? autolinker.link(String(feature.properties['CLN']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">RSX</th>\
+                        <td class="visible-with-data" id="RSX">' + (feature.properties['RSX'] !== null ? autolinker.link(String(feature.properties['RSX']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">NTS</th>\
+                        <td class="visible-with-data" id="NTS">' + (feature.properties['NTS'] !== null ? autolinker.link(String(feature.properties['NTS']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Hientrang_2_0(feature) {
+            switch(String(feature.properties['Loaidat'])) {
+                default:
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,181,69,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'BHK':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,240,180,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'CAN':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,80,70,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'CLN':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,210,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'CQP':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,100,80,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DBV':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DCH':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DGD':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DGT':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,50,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DKH':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DKV':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DSH':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DTL':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(170,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DTT':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DVH':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'DYT':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'LUK':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,252,150,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'NHK':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,240,180,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'NTS':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(170,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'ODT':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,160,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'ODT +CLN':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,160,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'ODT+BHK':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,160,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'ODT+CLN':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,160,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'SON':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(160,255,255,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'TMD':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(250,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'TON':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'TSC':
+                    return {
+                pane: 'pane_Hientrang_2',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,160,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Hientrang_2');
+        map.getPane('pane_Hientrang_2').style.zIndex = 402;
+        map.getPane('pane_Hientrang_2').style['mix-blend-mode'] = 'normal';
+        var layer_Hientrang_2 = new L.geoJson(json_Hientrang_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Hientrang_2',
+            layerName: 'layer_Hientrang_2',
+            pane: 'pane_Hientrang_2',
+            onEachFeature: pop_Hientrang_2,
+            style: style_Hientrang_2_0,
+        });
+        bounds_group.addLayer(layer_Hientrang_2);
+        map.addLayer(layer_Hientrang_2);
+        function pop_Thuyhe_3(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Thuyhe_3_0() {
+            return {
+                pane: 'pane_Thuyhe_3',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(170,255,255,1.0)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_Thuyhe_3');
+        map.getPane('pane_Thuyhe_3').style.zIndex = 403;
+        map.getPane('pane_Thuyhe_3').style['mix-blend-mode'] = 'normal';
+        var layer_Thuyhe_3 = new L.geoJson(json_Thuyhe_3, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_Thuyhe_3',
+            layerName: 'layer_Thuyhe_3',
+            pane: 'pane_Thuyhe_3',
+            onEachFeature: pop_Thuyhe_3,
+            style: style_Thuyhe_3_0,
+        });
+        bounds_group.addLayer(layer_Thuyhe_3);
+        map.addLayer(layer_Thuyhe_3);
+        function pop_Duonggiaothong_4(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Tên đường</th>\
+                        <td class="visible-with-data" id="Tenduong">' + (feature.properties['Tenduong'] !== null ? autolinker.link(String(feature.properties['Tenduong']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Lộ giới </th>\
+                        <td class="visible-with-data" id="Logioi">' + (feature.properties['Logioi'] !== null ? autolinker.link(String(feature.properties['Logioi']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Đoạn </th>\
+                        <td class="visible-with-data" id="Doan">' + (feature.properties['Doan'] !== null ? autolinker.link(String(feature.properties['Doan']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ODT</th>\
+                        <td class="visible-with-data" id="ODT">' + (feature.properties['ODT'] !== null ? autolinker.link(String(feature.properties['ODT']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Loại đường </th>\
+                        <td class="visible-with-data" id="Loaiduong">' + (feature.properties['Loaiduong'] !== null ? autolinker.link(String(feature.properties['Loaiduong']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Duonggiaothong_4_0() {
+            return {
+                pane: 'pane_Duonggiaothong_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,170,50,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Duonggiaothong_4');
+        map.getPane('pane_Duonggiaothong_4').style.zIndex = 404;
+        map.getPane('pane_Duonggiaothong_4').style['mix-blend-mode'] = 'normal';
+        var layer_Duonggiaothong_4 = new L.geoJson(json_Duonggiaothong_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Duonggiaothong_4',
+            layerName: 'layer_Duonggiaothong_4',
+            pane: 'pane_Duonggiaothong_4',
+            onEachFeature: pop_Duonggiaothong_4,
+            style: style_Duonggiaothong_4_0,
+        });
+        bounds_group.addLayer(layer_Duonggiaothong_4);
+        map.addLayer(layer_Duonggiaothong_4);
+        var overlaysTree = [
+            {label: '<img src="legend/Duonggiaothong_4.png" /> Duong giao thong', layer: layer_Duonggiaothong_4},
+            {label: '<img src="legend/Thuyhe_3.png" /> Thuy he', layer: layer_Thuyhe_3},
+            {label: 'Hien trang<br /><table><tr><td style="text-align: center;"><img src="legend/Hientrang_2_0.png" /></td><td></td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_BHK1.png" /></td><td>BHK</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_CAN2.png" /></td><td>CAN</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_CLN3.png" /></td><td>CLN</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_CQP4.png" /></td><td>CQP</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_BDV5.png" /></td><td>BDV</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DCH6.png" /></td><td>DCH</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DGD7.png" /></td><td>DGD</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DGT8.png" /></td><td>DGT</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DKH9.png" /></td><td>DKH</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DKV10.png" /></td><td>DKV</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DSH11.png" /></td><td>DSH</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DTL12.png" /></td><td>DTL</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DTT13.png" /></td><td>DTT</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DVH14.png" /></td><td>DVH</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_DYT15.png" /></td><td>DYT</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_LUK16.png" /></td><td>LUK</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_NHK17.png" /></td><td>NHK</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_NTS18.png" /></td><td>NTS</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_ODT19.png" /></td><td>ODT</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_ODTCLN20.png" /></td><td>ODT + CLN</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_ODT21.png" /></td><td>ODT + </td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_ODTCLN22.png" /></td><td>ODT +CLN</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_SON23.png" /></td><td>SON</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_TMD24.png" /></td><td>TMD</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_TON25.png" /></td><td>TON</td></tr><tr><td style="text-align: center;"><img src="legend/Hientrang_2_TSC26.png" /></td><td>TSC</td></tr></table>', layer: layer_Hientrang_2},
+            {label: 'Gia dat phi Nong <br /><table><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2000000.png" /></td><td>200000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2016001.png" /></td><td>201600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2136002.png" /></td><td>213600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2208003.png" /></td><td>220800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2217604.png" /></td><td>221760</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2268005.png" /></td><td>226800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2280006.png" /></td><td>228000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2328007.png" /></td><td>232800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2496008.png" /></td><td>249600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2544009.png" /></td><td>254400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_25920010.png" /></td><td>259200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_25956011.png" /></td><td>259560</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_26880012.png" /></td><td>268800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_28800013.png" /></td><td>288000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_29376014.png" /></td><td>293760</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_29520015.png" /></td><td>295200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_31320016.png" /></td><td>313200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_31680017.png" /></td><td>316800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_33600018.png" /></td><td>336000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_35040019.png" /></td><td>350400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_36000020.png" /></td><td>360000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_36400021.png" /></td><td>364000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_36720022.png" /></td><td>367200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_37080023.png" /></td><td>370800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_38016024.png" /></td><td>380160</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_39360025.png" /></td><td>393600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_43680026.png" /></td><td>436800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_44520027.png" /></td><td>445200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_44640028.png" /></td><td>446400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_45360029.png" /></td><td>453600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_47040030.png" /></td><td>470400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_48000031.png" /></td><td>480000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_49200032.png" /></td><td>492000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_49440033.png" /></td><td>494400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_50400034.png" /></td><td>504000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_52800035.png" /></td><td>528000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_54000036.png" /></td><td>540000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_55080037.png" /></td><td>550800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_55200038.png" /></td><td>552000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_55440039.png" /></td><td>554400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_56160040.png" /></td><td>561600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_57624041.png" /></td><td>576240</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_58800042.png" /></td><td>588000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_61200043.png" /></td><td>612000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_61320044.png" /></td><td>613200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_62400045.png" /></td><td>624000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_63360046.png" /></td><td>633600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_63600047.png" /></td><td>636000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_64800048.png" /></td><td>648000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_65880049.png" /></td><td>658800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_66000050.png" /></td><td>660000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_67200051.png" /></td><td>672000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_68880052.png" /></td><td>688800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_69600053.png" /></td><td>696000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_72000054.png" /></td><td>720000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_73200055.png" /></td><td>732000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_74088056.png" /></td><td>740880</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_74400057.png" /></td><td>744000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_74760058.png" /></td><td>747600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_75600059.png" /></td><td>756000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_76440060.png" /></td><td>764400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_76800061.png" /></td><td>768000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_79200062.png" /></td><td>792000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_79800063.png" /></td><td>798000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_80976064.png" /></td><td>809760</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_81600065.png" /></td><td>816000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_82320066.png" /></td><td>823200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_82800067.png" /></td><td>828000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_83160068.png" /></td><td>831600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_84000069.png" /></td><td>840000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_84600070.png" /></td><td>846000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_85680071.png" /></td><td>856800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_86400072.png" /></td><td>864000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_86436073.png" /></td><td>864360</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_86520074.png" /></td><td>865200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_86760075.png" /></td><td>867600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_87600076.png" /></td><td>876000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_89520077.png" /></td><td>895200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_90000078.png" /></td><td>900000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_92400079.png" /></td><td>924000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_94800080.png" /></td><td>948000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_94920081.png" /></td><td>949200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_95760082.png" /></td><td>957600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_96000083.png" /></td><td>960000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_98400084.png" /></td><td>984000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_104160085.png" /></td><td>1041600</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_104400086.png" /></td><td>1044000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_106800087.png" /></td><td>1068000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_109200088.png" /></td><td>1092000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_110880089.png" /></td><td>1108800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_111600090.png" /></td><td>1116000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_114000091.png" /></td><td>1140000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_115680092.png" /></td><td>1156800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_116400093.png" /></td><td>1164000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_117600094.png" /></td><td>1176000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_118800095.png" /></td><td>1188000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_120000096.png" /></td><td>1200000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_121530097.png" /></td><td>1215300</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_122400098.png" /></td><td>1224000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_123480099.png" /></td><td>1234800</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1236000100.png" /></td><td>1236000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1248000101.png" /></td><td>1248000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1260000102.png" /></td><td>1260000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1272000103.png" /></td><td>1272000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1279200104.png" /></td><td>1279200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1356000105.png" /></td><td>1356000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1368000106.png" /></td><td>1368000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1380000107.png" /></td><td>1380000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1395000108.png" /></td><td>1395000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1404000109.png" /></td><td>1404000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1428000110.png" /></td><td>1428000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1488000111.png" /></td><td>1488000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1560000112.png" /></td><td>1560000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1620400113.png" /></td><td>1620400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1680000114.png" /></td><td>1680000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1788000115.png" /></td><td>1788000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1790400116.png" /></td><td>1790400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1800000117.png" /></td><td>1800000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1836000118.png" /></td><td>1836000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1848000119.png" /></td><td>1848000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1860000120.png" /></td><td>1860000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_1940400121.png" /></td><td>1940400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2024400122.png" /></td><td>2024400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2196000123.png" /></td><td>2196000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2400000124.png" /></td><td>2400000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2558400125.png" /></td><td>2558400</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2640000126.png" /></td><td>2640000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2772000127.png" /></td><td>2772000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2835700128.png" /></td><td>2835700</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2881200129.png" /></td><td>2881200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_2892000130.png" /></td><td>2892000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_3133200131.png" /></td><td>3133200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_3255000132.png" /></td><td>3255000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_3960000133.png" /></td><td>3960000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_4051000134.png" /></td><td>4051000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_4116000135.png" /></td><td>4116000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_4476000136.png" /></td><td>4476000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_4477200137.png" /></td><td>4477200</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_4650000138.png" /></td><td>4650000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_4848000139.png" /></td><td>4848000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_5880000140.png" /></td><td>5880000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_6396000141.png" /></td><td>6396000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_6636000142.png" /></td><td>6636000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_7872000143.png" /></td><td>7872000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_8400000144.png" /></td><td>8400000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_9480000145.png" /></td><td>9480000</td></tr><tr><td style="text-align: center;"><img src="legend/GiadatphiNong_1_146.png" /></td><td></td></tr></table>', layer: layer_GiadatphiNong_1},
+            {label: 'Gia dat nong nghiep<br /><table><tr><td style="text-align: center;"><img src="legend/Giadatnongnghiep_0_840000.png" /></td><td>84000</td></tr><tr><td style="text-align: center;"><img src="legend/Giadatnongnghiep_0_1000001.png" /></td><td>100000</td></tr><tr><td style="text-align: center;"><img src="legend/Giadatnongnghiep_0_1260002.png" /></td><td>126000</td></tr><tr><td style="text-align: center;"><img src="legend/Giadatnongnghiep_0_3.png" /></td><td></td></tr></table>', layer: layer_Giadatnongnghiep_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        setBounds();
+        </script>
+    </body>
+</html>
